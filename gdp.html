@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>USA GDP by quarter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <style type="text/css">
+
+    text{
+      font: 14pt sans-serif;
+      font-family: 'Avenir';
+    }
+
+    .label {
+      font-size: 22pt;
+    }
+
+     .axis path,
+        .axis line {
+          fill: none;
+          stroke: #000;
+          stroke-width: 0.1pt;
+        }
+
+      .bar {
+        fill: rgba(0,126,126, 0.55);
+        stroke-width: 0;
+      }
+
+    </style>
+  </head>
+  <body>
+    <script type="text/javascript">
+      var outerWidth = window.innerWidth - 50;
+      var outerHeight = window.innerHeight - 50;
+
+      var margin = {left: 120, top: 50, right: 0, bottom: 80};
+
+      var innerWidth = outerWidth - margin.left - margin.right;
+      var innerHeight = outerHeight - margin.top - margin.bottom;
+
+      var xColumn = 'date';
+      var yColumn = 'gdp';
+      var xAxisLabelText = "Date";
+      var xAxisLabelOffset = 55;
+      var yAxisLabelText = "GDP/ million";
+      var yAxisLabelOffset = -80;
+      var GraphText = "US GDP from 1950 - 2016 by quarter";
+      var GraphLabelOffset = 100;
+
+      var svg = d3.select('body').append('svg')
+        .attr('width', outerWidth)
+        .attr('height', outerHeight);
+      var g = svg.append('g')
+        .attr('transform', 'translate(' + margin.left + ',' +margin.top +')');
+      var xAxisG = g.append('g')
+        .attr('transform', 'translate(0,' + innerHeight + ")")
+        .attr('class', 'x axis');
+      var yAxisG = g.append('g')
+        .attr('class', 'y axis');
+      var GraphLabel = svg.append('text')
+        .style('text-anchor', 'middle')
+        .attr('transform', 'translate(' + (outerWidth/2) + ',' + xAxisLabelOffset +')')
+        .attr('class', 'axis label')
+        .text(GraphText);
+
+      /*var xAxisLabel = xAxisG.append('text')
+        .style('text-anchor', 'middle')
+        .attr('transform', 'translate(' + (innerWidth/2) + ',' + xAxisLabelOffset +')')
+      	.attr('class', 'label')
+      	.text(xAxisLabelText);
+      */
+      var yAxisLabel = yAxisG.append('text')
+        .style('text-anchor', 'middle')
+        .attr('transform', 'translate(' + yAxisLabelOffset + ',' + (innerHeight/2) +") rotate(-90)")
+      	.attr('class', 'label')
+      	.text(yAxisLabelText);
+
+      var xScale = d3.time.scale().range([0, innerWidth]);
+      var yScale = d3.scale.linear().range([innerHeight, 0]);
+
+      var xAxis = d3.svg.axis().scale(xScale).orient('bottom')
+        .ticks(10)
+        .outerTickSize(0)
+        .tickFormat(d3.time.format("%b '%y"));
+
+      var yAxis = d3.svg.axis().scale(yScale).orient('left')
+        .outerTickSize(0);
+
+      var info = svg.append('g')
+        .style('display', 'none');
+
+        info.append('rect')
+        .attr('width', 250)
+        .attr('height', '15pt')
+        .attr('text-anchor', 'middle')
+        .style('fill', 'rgba(155, 155, 95, 0.65)')
+        .attr('dx', '1em')
+        .attr('dy', '1em');
+
+        info.append('text')
+        .style('fill', 'black')
+        .style('font-family', 'monospace')
+        .attr('text-anchor', 'left')
+        .attr('dx', '1em')
+        .attr('dy', '1em');
+
+      function mousemove() {
+        var format = d3.time.format("%b %Y");
+        var x0 = xScale.invert(d3.mouse(this)[0]);
+        var y0 = yScale.invert(innerHeight - d3.mouse(this)[0] * innerHeight / innerWidth);
+        info.select('text')
+          .text(format(x0) + "/ " + y0.toFixed(0) + " million")
+          .style('font-size', '12pt')
+          .attr('x', d3.mouse(this)[0])
+          .attr('y', d3.mouse(this)[1]);
+        info.select('rect')
+        .attr('x', d3.mouse(this)[0])
+        .attr('y', d3.mouse(this)[1]);
+      }
+
+      function render(data) {
+        xScale.domain(d3.extent(data, function(d) {return d[xColumn]}));
+        yScale.domain([0, d3.max(data, function(d) {return d[yColumn]})]);
+
+        xAxisG.call(xAxis)
+        .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", function(d) {
+              return "rotate(-55)"
+              });
+        yAxisG.call(yAxis);
+
+        var bars = g.selectAll('rect').data(data);
+        bars.enter().append('rect')
+          .attr('class', 'bar')
+          .attr('width', innerWidth/data.length);
+        bars
+          .attr('x', function(d) {return xScale(d[xColumn])})
+          .attr('y', function(d) {return yScale(d[yColumn])})
+          .attr('height', function(d) {return innerHeight - yScale(d[yColumn])})
+          .on("mouseover", function() {
+            info.style("display", null);
+            d3.select(this).style("fill", 'rgba(0,126,126, 0.9)');
+          })
+          .on("mouseout", function() {
+            info.style("display", "none");
+            d3.select(this).style('fill', 'rgba(0,126,126, 0.55)');
+          })
+          .on("mousemove", mousemove);
+
+        bars.exit().remove();
+      }
+
+      function type(d) {
+        d.date = new Date(d.DATE);
+        d.gdp = +d.GDP;
+        return d;
+      }
+
+      //added one comment
+
+      /* for future reference: function type(d) {
+          for (var i=0;i<d['data'].length;i++) {
+            d['info'].date = d['data'][i][0];
+            d['info'].gdp = d['data'][i][1];
+          }
+        console.log(d);
+        console.log(d.date, d.gdp);
+      }
+
+      d3.json('GDP-data.json', type); */
+
+      d3.csv('gdpUSA.csv', type, render);
+    </script>
+  </body>
+</html>
