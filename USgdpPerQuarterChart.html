@@ -4,10 +4,11 @@
     <meta charset="utf-8">
     <title>USA GDP by quarter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js" charset="utf-8"></script>
     <style type="text/css">
 
     text{
-      font: 14pt sans-serif;
+      font-size: 14pt;
       font-family: 'Avenir';
     }
 
@@ -18,35 +19,44 @@
      .axis path,
         .axis line {
           fill: none;
-          stroke: #000;
-          stroke-width: 0.1pt;
+          stroke: rgba(155, 155, 95, 0.8);
+          stroke-width: 1pt;
         }
 
+
+
       .bar {
-        fill: rgba(0,126,126, 0.55);
+        fill: rgba(0, 126, 126, 0.55);
         stroke-width: 0;
       }
 
+      .footnote {
+        font-size: 9pt;
+        font-family: "Arial";
+      }
     </style>
   </head>
   <body>
     <script type="text/javascript">
+
       var outerWidth = window.innerWidth - 50;
       var outerHeight = window.innerHeight - 50;
 
-      var margin = {left: 120, top: 50, right: 0, bottom: 80};
+      var margin = {left: 150, top: 70, right: 100, bottom: 120};
 
       var innerWidth = outerWidth - margin.left - margin.right;
       var innerHeight = outerHeight - margin.top - margin.bottom;
 
-      var xColumn = 'date';
-      var yColumn = 'gdp';
+      var xColumn = 0;
+      var yColumn = 1;
       var xAxisLabelText = "Date";
       var xAxisLabelOffset = 55;
       var yAxisLabelText = "GDP/ million";
       var yAxisLabelOffset = -80;
-      var GraphText = "US GDP from 1950 - 2016 by quarter";
+      var GraphText = "US GDP by quarter";
       var GraphLabelOffset = 100;
+      var footnoteText = "Source: US. Bureau of Economic Analysis, Real Gross Domestic Product [GDPC1], retrieved from FRED, Federal Reserve Bank of St. Louis; https://fred.stlouisfed.org/series/GDPC1, September 11, 2016."
+      var footnoteHeight = innerHeight + 180;
 
       var svg = d3.select('body').append('svg')
         .attr('width', outerWidth)
@@ -63,6 +73,11 @@
         .attr('transform', 'translate(' + (outerWidth/2) + ',' + xAxisLabelOffset +')')
         .attr('class', 'axis label')
         .text(GraphText);
+      var footnote = svg.append('text')
+        .style('text-anchor', 'middle')
+        .attr('transform', 'translate(' + (outerWidth/2) + ',' + footnoteHeight +')')
+        .attr('class', 'footnote')
+        .text(footnoteText);
 
       /*var xAxisLabel = xAxisG.append('text')
         .style('text-anchor', 'middle')
@@ -80,47 +95,62 @@
       var yScale = d3.scale.linear().range([innerHeight, 0]);
 
       var xAxis = d3.svg.axis().scale(xScale).orient('bottom')
-        .ticks(10)
+        .ticks(15)
         .outerTickSize(0)
         .tickFormat(d3.time.format("%b '%y"));
 
       var yAxis = d3.svg.axis().scale(yScale).orient('left')
+        .tickSize(5)
         .outerTickSize(0);
 
       var info = svg.append('g')
         .style('display', 'none');
 
         info.append('rect')
-        .attr('width', 250)
-        .attr('height', '15pt')
-        .attr('text-anchor', 'middle')
-        .style('fill', 'rgba(155, 155, 95, 0.65)')
-        .attr('dx', '1em')
+        .attr('width', 150)
+        .attr('height', '30pt')
+        .attr('dy', 100)
+        .style('fill', 'rgba(155, 155, 95, 0.65)');
+
+        info.append('text')
+        .style('fill', 'black')
+        .style('text-anchor', 'middle')
+        .attr('class', 'gdpText')
+        .attr('dx', margin.left)
         .attr('dy', '1em');
 
         info.append('text')
         .style('fill', 'black')
-        .style('font-family', 'monospace')
-        .attr('text-anchor', 'left')
-        .attr('dx', '1em')
-        .attr('dy', '1em');
+        .style('text-anchor', 'middle')
+        .attr('class', 'yearText')
+        .attr('dx', margin.left)
+        .attr('dy', '2em');
 
       function mousemove() {
         var format = d3.time.format("%b %Y");
-        var x0 = xScale.invert(d3.mouse(this)[0]);
-        var y0 = yScale.invert(innerHeight - d3.mouse(this)[0] * innerHeight / innerWidth);
-        info.select('text')
-          .text(format(x0) + "/ " + y0.toFixed(0) + " million")
+        var x0 = xScale.invert(d3.select(this).attr('x'));
+        var y0 = yScale.invert(d3.select(this).attr('y'));
+        info.select('.gdpText')
+          .text(y0.toFixed(0) + " million")
+          .style('font-family', 'Courier')
           .style('font-size', '12pt')
           .attr('x', d3.mouse(this)[0])
-          .attr('y', d3.mouse(this)[1]);
-        info.select('rect')
+          .attr('y', d3.mouse(this)[1])
+        info.select('.yearText')
+        .text(format(x0))
+        .style('font-family', 'Courier')
+        .style('font-size', '12pt')
         .attr('x', d3.mouse(this)[0])
+        .attr('y', d3.mouse(this)[1])
+        info.select('rect')
+        .attr('x', d3.mouse(this)[0] + margin.left/2)
         .attr('y', d3.mouse(this)[1]);
       }
 
       function render(data) {
-        xScale.domain(d3.extent(data, function(d) {return d[xColumn]}));
+        //console.log(data);
+        data = data.sort(function(a, b){ return d3.descending(a["date"], b["date"]); })
+        xScale.domain(d3.extent(data, function(d) {return new Date(d[xColumn])}));
         yScale.domain([0, d3.max(data, function(d) {return d[yColumn]})]);
 
         xAxisG.call(xAxis)
@@ -138,12 +168,15 @@
           .attr('class', 'bar')
           .attr('width', innerWidth/data.length);
         bars
-          .attr('x', function(d) {return xScale(d[xColumn])})
+          .attr('x', function(d) {return xScale(new Date(d[xColumn]))})
           .attr('y', function(d) {return yScale(d[yColumn])})
           .attr('height', function(d) {return innerHeight - yScale(d[yColumn])})
           .on("mouseover", function() {
             info.style("display", null);
             d3.select(this).style("fill", 'rgba(0,126,126, 0.9)');
+            mousemove;
+            //console.log(d3.select(this).attr('x'));
+            //console.log(d3.select(this).attr('y'));
           })
           .on("mouseout", function() {
             info.style("display", "none");
@@ -154,26 +187,33 @@
         bars.exit().remove();
       }
 
-      function type(d) {
-        d.date = new Date(d.DATE);
-        d.gdp = +d.GDP;
-        return d;
-      }
+//      function type(d) {
+//        console.log(d);
+//        d.date = new Date(d.date);
+//        d.gdp = +d.gdp;
+//        return d;
+//      }
 
       //added one comment
 
-      /* for future reference: function type(d) {
-          for (var i=0;i<d['data'].length;i++) {
-            d['info'].date = d['data'][i][0];
-            d['info'].gdp = d['data'][i][1];
-          }
+      /*function type(d) {
+
+            //d.date = d['data'][0];
+            //d.gdp = d['data'][1];
+
         console.log(d);
-        console.log(d.date, d.gdp);
+        //console.log(d.date, d.gdp);
       }
+      */
+      var url = "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/GDP-data.json";
+      $.getJSON(url, function(jsonData) {
+        var data = jsonData.data;
+        console.log(data);
+        render(data);
+      });
 
-      d3.json('GDP-data.json', type); */
 
-      d3.csv('gdpUSA.csv', type, render);
+
     </script>
   </body>
 </html>
